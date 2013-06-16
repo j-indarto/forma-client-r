@@ -31,7 +31,7 @@ dateRange <- function(begin = "", end = "") {
   ## Example usage:
   ##   > dateRange(begin = "2005-12-01", end = "2008-04-14")
   ##   "?date=2005-12-01,2008-04-14"
-  query.pre <- "?date="
+  query.pre <- "?range="
   if (begin == "" && end == "") {
     return("")
   } else if (begin != "" && end == "") {
