@@ -5,8 +5,14 @@ library(RCurl)
 query <- function(q) {
   ## Accepts the API query for a URL request and returns an R list
   ## from a JSON object
-  base.url <- "http://wip.forma-api.appspot.com/api/counts/"
-  req <- paste(base.url, URLencode(q), sep = "")
+  base.url <- "http://wip.forma-api.appspot.com/api/counts"
+
+  if (q == "") {
+    req <- base.url
+  } else {
+    req <- paste(base.url, URLencode(q), sep = "/")
+  }
+  
   print(paste("Request:", req))
   return(fromJSON(getURL(req), unexpected.escape = "skip"))
 }
@@ -65,8 +71,17 @@ count.query <- function(iso = NULL, id1 = NULL, id2 = NULL, id3 = NULL,
   q <- paste(admin, agg, date, sep = "")
   res <- query(q)
 
+  .unnest <- function(entry) {
+    date  <- entry$series[[1]][[1]]; count <- entry$series[[1]][[2]]
+    list(iso = entry$iso, country = entry$country, date = date, count = count)
+  }
+
   ## Return a panel data frame
-  table <- do.call(rbind.data.frame, res$rows)
+  flat.list <- lapply(res$data[[1]]$series, .unnest)
+  print(flat.list)
+  table <- do.call(rbind.data.frame, flat.list)
+
+  print(paste(nrow(table), "entries returned.", sep = " "))
 
   ## convert date string to R date object
   table$date <- as.Date(table$date)
