@@ -10,7 +10,7 @@ query <- function(q) {
   if (q == "") {
     req <- base.url
   } else {
-    req <- paste(base.url, URLencode(q), sep = "/")
+    req <- paste(base.url, URLencode(q), sep = "")
   }
   
   print(paste("Request:", req))
@@ -25,7 +25,12 @@ admin.path <- function(...) {
   ##   > adminPath("idn", 2, 3)
   ##   "idn/2/3"
   filtered <- as.list(Filter(function(x) { !is.null(x) }, c(...)))
-  return(do.call("paste", c(filtered, sep = "/")))
+  res <- do.call("paste", c(filtered, sep = "/"))
+  if (length(res) != 0) {
+    return(paste("/", res, sep = ""))
+  } else {
+    return(res)
+  }
 }
 
 date.range <- function(begin = NULL, end = NULL) {
@@ -37,9 +42,9 @@ date.range <- function(begin = NULL, end = NULL) {
   ## Example usage:
   ##   > dateRange(begin = "2005-12-01", end = "2008-04-14")
   ##   "?date=2005-12-01,2008-04-14"
-  query.pre <- "?range="
+  query.pre <- "range="
   if (is.null(begin) && is.null(end)) {
-    return("")
+    return(NULL)
   } else if (!is.null(begin) && is.null(end)) {
     return(paste(query.pre, begin, sep = ""))
   } else if (!is.null(begin) && !is.null(end)) {
@@ -53,10 +58,34 @@ agg.admin <- function(level = NULL) {
   ## Accepts a level for aggregation and returns the appropriately
   ## formatted query parameter
   if (!is.null(level)) {
-    return(paste("?aggregate=", level, sep = ""))
+    return(paste("aggregate=", level, sep = ""))
   } else {
-    return("")
+    return(NULL)
   }
+}
+
+count.params <- function(aggregate.level = NULL,
+                         begin = NULL, end = NULL) {
+  ## Constructs the parameter string for the URL query
+  agg   <- agg.admin(level = aggregate.level)
+  date  <- date.range(begin = begin, end = end)
+  params <- paste(na.omit(c(agg, date)), collapse = "&", sep = "")
+  if (params == "") {
+    return(NULL)
+  } else {
+    return(paste("?", params, sep = ""))
+  }
+}
+
+convert.entry <- function(entry) {
+  ## Accepts a list entry from the JSON conversion of an
+  ## administrative unit and the series associated with it.  Returns a
+  ## data frame sorted by date for that unit.
+  temporal <- do.call(rbind.data.frame, entry$series)
+  names(temporal) <- c("date", "count")
+  unit <- rbind(entry[-1])
+  data <- data.frame(unit, temporal)
+  return(data[sort(data$date),])
 }
 
 count.query <- function(iso = NULL, id1 = NULL, id2 = NULL, id3 = NULL,
@@ -64,26 +93,15 @@ count.query <- function(iso = NULL, id1 = NULL, id2 = NULL, id3 = NULL,
   ## Accepts a specification of the desired data and returns a data
   ## frame of the panel data set
 
-  ## Build the structured query and return the results
-  admin <- admin.path(iso = iso, id1 = id1, id2 = id2, id3 = id3)
-  agg   <- agg.admin(level = aggregate.level)
-  date  <- date.range(begin = begin, end = end)
-  q <- paste(admin, agg, date, sep = "")
+  ## Build the structured query and return the results as a list,
+  ## converted from the JSON object
+  admin <- admin.path(iso, id1, id2, id3)
+  params <- count.params(aggregate.level, begin, end)
+  q <- paste(na.omit(c(admin, params)), collapse = "")
   res <- query(q)
 
-  .unnest <- function(entry) {
-    date  <- entry$series[[1]][[1]]; count <- entry$series[[1]][[2]]
-    list(iso = entry$iso, country = entry$country, date = date, count = count)
-  }
-
-  ## Return a panel data frame
-  flat.list <- lapply(res$data[[1]]$series, .unnest)
-  print(flat.list)
-  table <- do.call(rbind.data.frame, flat.list)
-
-  print(paste(nrow(table), "entries returned.", sep = " "))
-
-  ## convert date string to R date object
-  table$date <- as.Date(table$date)
-  return(table)
+  ## Bind the time series by unit into a panel and return the panel.
+  panel <- do.call(rbind, lapply(res$data, convert.entry))
+  print(paste(nrow(panel), "entries returned.", sep = " "))
+  return(panel)
 }
