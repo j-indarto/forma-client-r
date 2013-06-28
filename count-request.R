@@ -41,7 +41,7 @@ date.range <- function(begin = NULL, end = NULL) {
 
   ## Example usage:
   ##   > dateRange(begin = "2005-12-01", end = "2008-04-14")
-  ##   "?date=2005-12-01,2008-04-14"
+  ##   "range=2005-12-01,2008-04-14"
   query.pre <- "range="
   if (is.null(begin) && is.null(end)) {
     return(NULL)
