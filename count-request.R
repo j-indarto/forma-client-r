@@ -6,13 +6,7 @@ query <- function(q) {
   ## Accepts the API query for a URL request and returns an R list
   ## from a JSON object
   base.url <- "http://wip.forma-api.appspot.com/api/counts"
-
-  if (q == "") {
-    req <- base.url
-  } else {
-    req <- paste(base.url, URLencode(q), sep = "")
-  }
-  
+  req <- paste(base.url, URLencode(q), sep = "")
   print(paste("Request:", req))
   return(fromJSON(getURL(req), unexpected.escape = "skip"))
 }
