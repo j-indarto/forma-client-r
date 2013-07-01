@@ -63,7 +63,7 @@ count.params <- function(aggregate.level = NULL,
   ## Constructs the parameter string for the URL query
   agg   <- agg.admin(level = aggregate.level)
   date  <- date.range(begin = begin, end = end)
-  params <- paste(na.omit(c(agg, date)), collapse = "&", sep = "")
+  params <- suppressWarnings(paste(na.omit(c(agg, date)), collapse = "&", sep = ""))
   if (params == "") {
     return(NULL)
   } else {
@@ -77,7 +77,8 @@ convert.entry <- function(entry) {
   ## data frame sorted by date for that unit.
   temporal <- do.call(rbind.data.frame, entry$series)
   names(temporal) <- c("date", "count")
-  unit <- rbind(entry[-1])
+  ns <<- names(entry)
+  unit <<- rbind(entry[!(names(entry) %in% "series")])
   data <- data.frame(unit, temporal)
   return(data[sort(data$date),])
 }
@@ -91,11 +92,12 @@ count.query <- function(iso = NULL, id1 = NULL, id2 = NULL, id3 = NULL,
   ## converted from the JSON object
   admin <- admin.path(iso, id1, id2, id3)
   params <- count.params(aggregate.level, begin, end)
-  q <- paste(na.omit(c(admin, params)), collapse = "")
-  res <- query(q)
+  suppressWarnings(q <- paste(na.omit(c(admin, params)), collapse = ""))
+  res <<- query(q)
 
   ## Bind the time series by unit into a panel and return the panel.
   panel <- do.call(rbind, lapply(res$data, convert.entry))
+  row.names(panel) <- NULL
   print(paste(nrow(panel), "entries returned.", sep = " "))
   return(panel)
 }
