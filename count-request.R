@@ -77,9 +77,16 @@ convert.entry <- function(entry) {
   ## data frame sorted by date for that unit.
   temporal <- do.call(rbind.data.frame, entry$series)
   names(temporal) <- c("date", "count")
-  ns <<- names(entry)
-  unit <<- rbind(entry[!(names(entry) %in% "series")])
+  unit <- rbind(entry[!(names(entry) %in% "series")])
   data <- data.frame(unit, temporal)
+
+  ## Preferred ordering of all possible fields
+  pref.order <- c("iso", "country", "name1", "id1", "name2", "id2",
+                  "name3", "id3", "name4", "id4", "name5", "id5",
+                  "date", "count")
+
+  .order <- pref.order[pref.order %in% names(data)]
+  data <- data[.order]
   return(data[sort(data$date),])
 }
 
